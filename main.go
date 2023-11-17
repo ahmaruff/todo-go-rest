@@ -1,23 +1,38 @@
 package main
 
 import (
-	"net/http"
+	"os"
 	"todo-go/todo"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+
+	err := godotenv.Load()
+
+	if err != nil {
+		log.Fatal().Err(err).Msg(err.Error())
+	}
+
+	serverAddress := os.Getenv("TODO_SERVER_ADDRESS")
+	serverPort := os.Getenv("TODO_SERVER_PORT")
+
 	todo.SetupDatabase()
 
 	e := echo.New()
 	todo.InitTodoRoutes(e)
 
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	server := serverAddress + ":" + serverPort
 	log.Info().Msg("Starting up server...")
 
-	if err := e.Start(":8080"); err != http.ErrServerClosed {
-		log.Fatal().Err(err).Msg("failed to start server")
-	}
+	err = e.Start(server)
+	e.Logger.Fatal(err)
 }
