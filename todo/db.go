@@ -16,7 +16,7 @@ func SetDatabase(db_name string) error {
 	var err error
 
 	if db_name == "" {
-		return errors.New("There is no database")
+		return errors.New("there is no database")
 	}
 
 	// remove old sqlite db if exist
@@ -24,7 +24,7 @@ func SetDatabase(db_name string) error {
 
 	db, err = sql.Open("sqlite3", db_name)
 	if err != nil {
-		log.Error().Err(err).Msg("Unable to connect to database")
+		log.Error().Err(err).Msg("unable to connect to database")
 	}
 	defer db.Close()
 
