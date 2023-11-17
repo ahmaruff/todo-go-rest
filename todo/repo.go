@@ -11,11 +11,10 @@ import (
 
 var ErrTodoNotFound error = errors.New("todo: not found")
 
-func findItemById(ctx context.Context, db *sql.DB, id ulid.ULID) (TodoItem, error) {
+func findItemById(ctx context.Context, tx *sql.Tx, id ulid.ULID) (TodoItem, error) {
 	q := `SELECT id, title, created_at, done_at FROM todolist WHERE id=$1`
 
-	// row, err := db.ExecContext(ctx, q, id)
-	row := db.QueryRowContext(ctx, q, id)
+	row := tx.QueryRowContext(ctx, q, id)
 
 	var item TodoItem
 	if err := row.Scan(&item.Id, &item.Title, &item.CreatedAt, &item.DoneAt); err != nil {
@@ -29,10 +28,10 @@ func findItemById(ctx context.Context, db *sql.DB, id ulid.ULID) (TodoItem, erro
 	return item, nil
 }
 
-func saveItem(ctx context.Context, db *sql.DB, item TodoItem) error {
+func saveItem(ctx context.Context, tx *sql.Tx, item TodoItem) error {
 	q := `INSERT ITO todolist(id, title, created_at, done_at) VALUES($1, $2, $3, $4) ON CONFLICT(id) DO UPDATE SET title=$2, done_at=$4`
 
-	_, err := db.ExecContext(ctx, q, item.Id, item.Title, item.CreatedAt, item.DoneAt)
+	_, err := tx.ExecContext(ctx, q, item.Id, item.Title, item.CreatedAt, item.DoneAt)
 
 	if err != nil {
 		return err

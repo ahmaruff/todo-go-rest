@@ -17,10 +17,10 @@ type TodoList struct {
 
 var emptyList TodoList
 
-func findAllItems(ctx context.Context, db *sql.DB) (TodoList, error) {
+func findAllItems(ctx context.Context, tx *sql.Tx) (TodoList, error) {
 	var itemCount int
 	q := `SELECT COUNT(id) AS cnt FROM todolist`
-	row := db.QueryRowContext(ctx, q)
+	row := tx.QueryRowContext(ctx, q)
 
 	err := row.Scan(&itemCount)
 
@@ -39,7 +39,7 @@ func findAllItems(ctx context.Context, db *sql.DB) (TodoList, error) {
 
 	q = `SELECT id, title, created_at, done_at FROM todolist`
 
-	rows, err := db.QueryContext(ctx, q)
+	rows, err := tx.QueryContext(ctx, q)
 
 	if err != nil {
 		return emptyList, err
