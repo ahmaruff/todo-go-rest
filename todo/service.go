@@ -110,6 +110,36 @@ func makeItemDone(ctx context.Context, id ulid.ULID) error {
 
 }
 
+func updateItem(ctx context.Context, id ulid.ULID, title string) (item TodoItem, err error) {
+	tx, err := DB.Begin()
+
+	if err != nil {
+		return TodoItem{}, err
+	}
+
+	item, err = findItemById(ctx, tx, id)
+
+	if err != nil {
+		tx.Rollback()
+		return TodoItem{}, err
+	}
+
+	item.Title = title
+
+	if err = saveItem(ctx, tx, item); err != nil {
+		tx.Rollback()
+		return TodoItem{}, err
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return TodoItem{}, err
+	}
+
+	return item, nil
+}
+
 func deleteItem(ctx context.Context, id ulid.ULID) error {
 	tx, err := DB.Begin()
 

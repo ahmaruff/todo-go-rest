@@ -34,7 +34,7 @@ func findItemById(ctx context.Context, tx *sql.Tx, id ulid.ULID) (item TodoItem,
 }
 
 func saveItem(ctx context.Context, tx *sql.Tx, item TodoItem) error {
-	q := `INSERT INTO todolist(id, title, created_at, done_at) VALUES(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title= ?, done_at= ?`
+	q := `INSERT INTO todolist(id, title, created_at, done_at) VALUES(?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET title= ?, done_at= ?`
 
 	stmt, err := tx.PrepareContext(ctx, q)
 

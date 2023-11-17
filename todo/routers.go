@@ -9,6 +9,7 @@ func InitTodoRoutes(e *echo.Echo) {
 	e.GET("/", listItemHandler)
 	e.POST("/", createItemHandler)
 	e.GET("/:id", getItemHandler)
+	e.PUT("/:id", editItemHandler)
 	e.POST("/done", makeItemDoneHandler)
 	e.DELETE("/:id", deleteItemHandler)
 }
@@ -117,6 +118,35 @@ func makeItemDoneHandler(c echo.Context) error {
 	}
 
 	return c.JSON(200, resp)
+}
+
+func editItemHandler(c echo.Context) error {
+	ctx := c.Request().Context()
+	item_id := c.Param("id")
+
+	Id, err := ulid.Parse(item_id)
+
+	if err != nil {
+		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+	}
+
+	type editItem struct {
+		Title string `json:"title"`
+	}
+
+	edit_item := new(editItem)
+
+	if err := c.Bind(edit_item); err != nil {
+		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+	}
+
+	item, err := updateItem(ctx, Id,edit_item.Title)
+
+	if err != nil {
+		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+	}
+
+	return c.JSON(200, item)
 }
 
 func deleteItemHandler(c echo.Context) error {
