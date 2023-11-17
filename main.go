@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	todo.SetDatabase()
+	todo.SetupDatabase()
 
 	e := echo.New()
 	todo.InitTodoRoutes(e)

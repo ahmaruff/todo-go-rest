@@ -7,20 +7,25 @@ import (
 )
 
 var (
-	db *sql.DB
+	DB *sql.DB
 )
 
-func SetDatabase() error {
-	var err error
-
-	var db_name string = "../todo.db"
-
-	db, err = sql.Open("sqlite3", db_name)
+func ConnectDatabase() error {
+	db, err := sql.Open("sqlite3", "../todo.db")
 	if err != nil {
-		log.Error().Err(err).Msg("unable to connect to database")
+		return err
 	}
 
-	log.Info().Any("db", db)
+	DB = db
+	return nil
+}
+
+func SetupDatabase() {
+	err := ConnectDatabase()
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to connect to database")
+	}
+
 	query := `CREATE TABLE IF NOT EXISTS todolist (
 		id TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
@@ -29,18 +34,11 @@ func SetDatabase() error {
 		is_done BOOLEAN GENERATED ALWAYS AS (done_at IS NOT NULL) STORED
 	);`
 
-	_, err = db.Exec(query)
-
-	log.Info().Any("db", db)
+	_, err = DB.Exec(query)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create database")
-		return err
+		log.Fatal().Err(err).Msg("unable to create table database")
 	}
 
-	return nil
-}
-
-func getDatabase() *sql.DB {
-	return db
+	// defer DB.Close()
 }

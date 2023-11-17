@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/rs/zerolog/log"
 )
 
 func listItems(ctx context.Context) (TodoList, error) {
-	tx, err := db.Begin()
+	tx, err := DB.Begin()
 
 	if err != nil {
 		return TodoList{}, err
@@ -31,7 +32,7 @@ func createItem(ctx context.Context, title string) (id ulid.ULID, err error) {
 		return
 	}
 
-	tx, err := db.Begin()
+	tx, err := DB.Begin()
 
 	if err != nil {
 		return
@@ -54,7 +55,7 @@ func createItem(ctx context.Context, title string) (id ulid.ULID, err error) {
 }
 
 func findItem(ctx context.Context, id ulid.ULID) (item TodoItem, err error) {
-	tx, err := db.Begin()
+	tx, err := DB.Begin()
 
 	if err != nil {
 		return
@@ -68,11 +69,15 @@ func findItem(ctx context.Context, id ulid.ULID) (item TodoItem, err error) {
 
 	err = tx.Commit()
 
-	return
+	if err != nil {
+		return TodoItem{}, err
+	}
+
+	return item, nil
 }
 
 func makeItemDone(ctx context.Context, id ulid.ULID) error {
-	tx, err := db.Begin()
+	tx, err := DB.Begin()
 
 	if err != nil {
 		return err
@@ -95,6 +100,35 @@ func makeItemDone(ctx context.Context, id ulid.ULID) error {
 		return err
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
 
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func deleteItem(ctx context.Context, id ulid.ULID) error {
+	tx, err := DB.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	_, err = deleteItemById(ctx, tx, id)
+
+	if err != nil {
+		tx.Rollback()
+		log.Debug().Err(err).Msg(err.Error())
+		return err
+	}
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
