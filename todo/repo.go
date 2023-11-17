@@ -29,7 +29,7 @@ func findItemById(ctx context.Context, tx *sql.Tx, id ulid.ULID) (TodoItem, erro
 }
 
 func saveItem(ctx context.Context, tx *sql.Tx, item TodoItem) error {
-	q := `INSERT ITO todolist(id, title, created_at, done_at) VALUES($1, $2, $3, $4) ON CONFLICT(id) DO UPDATE SET title=$2, done_at=$4`
+	q := `INSERT INTO todolist(id, title, created_at, done_at) VALUES($1, $2, $3, $4) ON CONFLICT(id) DO UPDATE SET title=$2, done_at=$4`
 
 	_, err := tx.ExecContext(ctx, q, item.Id, item.Title, item.CreatedAt, item.DoneAt)
 
