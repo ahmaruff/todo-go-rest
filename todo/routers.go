@@ -10,6 +10,7 @@ func InitTodoRoutes(e *echo.Echo) {
 	e.POST("/", createItemHandler)
 	e.GET("/:id", getItemHandler)
 	e.POST("/done", makeItemDoneHandler)
+	e.DELETE("/:id", deleteItemHandler)
 }
 
 func listItemHandler(c echo.Context) error {
@@ -28,7 +29,7 @@ func getItemHandler(c echo.Context) error {
 
 	item_id := c.Param("id")
 
-	id, err := ulid.Parse(item_id)
+	Id, err := ulid.Parse(item_id)
 
 	if err != nil {
 		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
@@ -36,7 +37,7 @@ func getItemHandler(c echo.Context) error {
 
 	var resp TodoItem
 
-	item, err := findItem(ctx, id)
+	item, err := findItem(ctx, Id)
 
 	if err != nil {
 		if err == ErrTodoNotFound {
@@ -113,6 +114,44 @@ func makeItemDoneHandler(c echo.Context) error {
 
 	resp := map[string]string{
 		"message": "item updated",
+	}
+
+	return c.JSON(200, resp)
+}
+
+func deleteItemHandler(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	item_id := c.Param("id")
+
+	Id, err := ulid.Parse(item_id)
+
+	if err != nil {
+		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+	}
+
+	_, err = findItem(ctx, Id)
+
+	if err != nil {
+		if err == ErrTodoNotFound {
+			notfound := map[string]string{
+				"message": "item not found",
+			}
+
+			return c.JSON(echo.ErrNotFound.Code, notfound)
+		}
+
+		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+	}
+
+	err = deleteItem(ctx, Id)
+
+	if err != nil {
+		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+	}
+
+	resp := map[string]string{
+		"message": "item deleted",
 	}
 
 	return c.JSON(200, resp)
