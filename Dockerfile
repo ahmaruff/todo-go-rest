@@ -1,27 +1,29 @@
-# syntax=docker/dockerfile:1
+# Use the official golang image as the base
+FROM golang:1.22 AS builder
 
-FROM golang:1.22
-
-# Set destination for COPY
+# Set working directory for the build stage
 WORKDIR /app
 
-# Download Go modules
-COPY go.mod go.sum ./
+# Copy your Go source code and dependencies (go.mod, go.sum)
+COPY . .
+
+# Download Go dependencies
 RUN go mod download
 
-# Copy the source code. Note the slash at the end, as explained in
-# https://docs.docker.com/reference/dockerfile/#copy
-COPY *.go ./
+# Build the Go binary (assuming main.go is your entrypoint)
+RUN go build -o todo .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-todo
+# Use a smaller image for running the application
+FROM alpine:latest AS runner
 
-# Optional:
-# To bind to a TCP port, runtime parameters must be supplied to the docker command.
-# But we can document in the Dockerfile what ports
-# the application is going to listen on by default.
-# https://docs.docker.com/reference/dockerfile/#expose
+# Copy the application binary from the build stage
+COPY --from=builder /app/todo /app/todo
+
+# Set working directory for the runner stage
+WORKDIR /app
+
+# Expose the port your application listens on (replace 8080 with your actual port)
 EXPOSE 8443
 
-# Run
-CMD ["/docker-todo"]
+# Run your application binary
+CMD ["./todo"]
