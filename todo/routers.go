@@ -5,6 +5,24 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+type apiResponse struct {
+	Status  string      `json:"status"`
+	Code    int         `json:"code"`
+	Message *string     `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+func writeResponse(c echo.Context, status string, statusCode int, message *string, data interface{}) error {
+	response := apiResponse{
+		Status:  status,
+		Code:    statusCode,
+		Message: message,
+		Data:    data,
+	}
+
+	return c.JSON(statusCode, response)
+}
+
 func InitTodoRoutes(e *echo.Echo) {
 	e.GET("/", listItemHandler)
 	e.POST("/", createItemHandler)
@@ -19,47 +37,43 @@ func listItemHandler(c echo.Context) error {
 	resp, err := listItems(ctx)
 
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+		errMsg := "Internal Server Error"
+		return writeResponse(c, "error", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
-	return c.JSON(200, resp)
+	return writeResponse(c, "success", 200, nil, resp)
 }
 
 func getItemHandler(c echo.Context) error {
 	ctx := c.Request().Context()
-
 	item_id := c.Param("id")
-
 	Id, err := ulid.Parse(item_id)
 
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		msg := "Invalid ID"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &msg, err)
 	}
 
 	var resp TodoItem
-
 	item, err := findItem(ctx, Id)
 
 	if err != nil {
 		if err == ErrTodoNotFound {
-			notfound := map[string]string{
-				"message": "item not found",
-			}
-
-			return c.JSON(echo.ErrNotFound.Code, notfound)
+			notfound := "item not found"
+			return writeResponse(c, "fail", echo.ErrNotFound.Code, &notfound, nil)
 		}
-
-		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+		errMsg := "Internal Server Error"
+		return writeResponse(c, "error", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
 	resp = item
-
-	return c.JSON(200, resp)
+	return writeResponse(c, "success", 200, nil, resp)
 }
 
 func createItemHandler(c echo.Context) error {
 	if err := c.Request().ParseForm(); err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "Bad Request"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	ctx := c.Request().Context()
@@ -67,16 +81,19 @@ func createItemHandler(c echo.Context) error {
 	type titleReq struct {
 		Title string `json:"title"`
 	}
+
 	title := new(titleReq)
 
 	if err := c.Bind(title); err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "Bad Request"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	id, err := createItem(ctx, title.Title)
 
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "Bad Request"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	var resp struct {
@@ -85,7 +102,7 @@ func createItemHandler(c echo.Context) error {
 
 	resp.Id = id
 
-	return c.JSON(201, resp)
+	return writeResponse(c, "success", 200, nil, resp)
 }
 
 func makeItemDoneHandler(c echo.Context) error {
@@ -96,28 +113,36 @@ func makeItemDoneHandler(c echo.Context) error {
 	}
 
 	done_req := new(doneReq)
-
 	if err := c.Bind(done_req); err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "Bad Request"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	Id, err := ulid.Parse(done_req.Id)
-
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "Bad Request"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	err = makeItemDone(ctx, Id)
-
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+		errMsg := "Internal Server Error"
+		return writeResponse(c, "fail", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
-	resp := map[string]string{
-		"message": "item updated",
+	item, err := findItem(ctx, Id)
+	if err != nil {
+		if err == ErrTodoNotFound {
+			notfound := "item not found"
+
+			return writeResponse(c, "fail", echo.ErrNotFound.Code, &notfound, nil)
+		}
+		errMsg := "Internal Server Error"
+		return writeResponse(c, "error", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
-	return c.JSON(200, resp)
+	resp := item
+	return writeResponse(c, "success", 200, nil, resp)
 }
 
 func editItemHandler(c echo.Context) error {
@@ -125,9 +150,9 @@ func editItemHandler(c echo.Context) error {
 	item_id := c.Param("id")
 
 	Id, err := ulid.Parse(item_id)
-
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "bad Request 1"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	type editItem struct {
@@ -135,18 +160,18 @@ func editItemHandler(c echo.Context) error {
 	}
 
 	edit_item := new(editItem)
-
 	if err := c.Bind(edit_item); err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "bad Request 2"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, edit_item)
 	}
 
-	item, err := updateItem(ctx, Id,edit_item.Title)
-
+	item, err := updateItem(ctx, Id, edit_item.Title)
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "bad Request 3"
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
-	return c.JSON(200, item)
+	return writeResponse(c, "success", 200, nil, item)
 }
 
 func deleteItemHandler(c echo.Context) error {
@@ -155,34 +180,30 @@ func deleteItemHandler(c echo.Context) error {
 	item_id := c.Param("id")
 
 	Id, err := ulid.Parse(item_id)
-
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrBadRequest.Code, err)
+		errMsg := "bad Request"
+
+		return writeResponse(c, "fail", echo.ErrBadRequest.Code, &errMsg, err)
 	}
 
 	_, err = findItem(ctx, Id)
-
 	if err != nil {
 		if err == ErrTodoNotFound {
-			notfound := map[string]string{
-				"message": "item not found",
-			}
-
-			return c.JSON(echo.ErrNotFound.Code, notfound)
+			errMsg := "Not Found"
+			return writeResponse(c, "fail", echo.ErrNotFound.Code, &errMsg, err)
 		}
+		errMsg := "Internal Server Error"
 
-		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+		return writeResponse(c, "error", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
 	err = deleteItem(ctx, Id)
-
 	if err != nil {
-		return echo.NewHTTPError(echo.ErrInternalServerError.Code, err)
+		errMsg := "Internal Server Error"
+
+		return writeResponse(c, "error", echo.ErrInternalServerError.Code, &errMsg, err)
 	}
 
-	resp := map[string]string{
-		"message": "item deleted",
-	}
-
-	return c.JSON(200, resp)
+	msg := "Item Deleted"
+	return writeResponse(c, "success", 200, &msg, nil)
 }
