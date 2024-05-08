@@ -1,29 +1,35 @@
-# Use the official Golang 1.21 image to create a build artifact.
-FROM golang:1.21 as builder
+FROM golang:1.22 AS builder
 
-# Set the Current Working Directory inside the container
+COPY ${PWD} /app
 WORKDIR /app
 
-# Copy go.mod and go.sum files
-COPY go.mod go.sum ./
+# Toggle CGO based on your app requirement. CGO_ENABLED=1 for enabling CGO
+RUN CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static"' -o /app/appbin *.go
+# Use below if using vendor
+# RUN CGO_ENABLED=0 go build -mod=vendor -ldflags '-s -w -extldflags "-static"' -o /app/appbin *.go
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
+FROM debian:stable-slim
+LABEL MAINTAINER Author <ahmadmaruf2701@gmail.com>
 
-# Copy the source from the current directory to the Working Directory inside the container
-COPY . .
+# Following commands are for installing CA certs (for proper functioning of HTTPS and other TLS)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates  \
+    netbase \
+    && rm -rf /var/lib/apt/lists/ \
+    && apt-get autoremove -y && apt-get autoclean -y
 
-# Build the Go app. Compile statically linked version of the binary.
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o todo-go .
+# Add new user 'appuser'. App should be run without root privileges as a security measure
+RUN adduser --home "/appuser" --disabled-password appuser \
+    --gecos "appuser,-,-,-"
+USER appuser
 
-# Use a distroless image for the runtime environment to minimize size and surface area of attack
-FROM gcr.io/distroless/static-debian11
+COPY --from=builder /app /home/appuser/app
 
-# Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/todo-go .
+WORKDIR /home/appuser/app
 
-# Expose the port your app runs on
-EXPOSE 4000
+# Since running as a non-root user, port bindings < 1024 are not possible
+# 8000 for HTTP; 8443 for HTTPS;
+EXPOSE 8000
+EXPOSE 8443
 
-# Run the binary
-CMD ["./todo-go"]
+CMD ["./appbin"]
