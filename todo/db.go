@@ -52,8 +52,8 @@ func SetupDatabase() {
 	query := `CREATE TABLE IF NOT EXISTS todolist (
 		id TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
-		created_at DATETIME NOT NULL,
-		done_at DATETIME,
+		created_at timestamp NOT NULL,
+		done_at timestamp,
 		is_done BOOLEAN GENERATED ALWAYS AS (done_at IS NOT NULL) STORED
 	);`
 
