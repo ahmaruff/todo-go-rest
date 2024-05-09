@@ -21,7 +21,7 @@ func main() {
 	}
 
 	serverAddress := os.Getenv("TODO_SERVER_ADDRESS")
-	serverPort := os.Getenv("TODO_SERVER_PORT")
+	serverPort := os.Getenv("PORT")
 
 	todo.SetupDatabase()
 
