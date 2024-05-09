@@ -16,7 +16,8 @@ func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Fatal().Err(err).Msg(err.Error())
+		os.Setenv("TODO_SERVER_ADDRESS", "0.0.0.0")
+		os.Setenv("TODO_SERVER_PORT", "80")
 	}
 
 	serverAddress := os.Getenv("TODO_SERVER_ADDRESS")
