@@ -1,23 +1,12 @@
-# Start from the latest golang base image
-FROM golang:latest
+FROM golang:1.21 AS builder
 
-# Add Maintainer Info
-LABEL maintainer="Ahmad <ahmadmaruf2701@gmail.com>"
-
-# Set the Current Working Directory inside the container
-WORKDIR /
-
-# Copy the source from the current directory to the Working Directory inside the container
+WORKDIR /src
 COPY . .
+RUN go mod download
+RUN go build -o /app .
 
-# Disable Go Modules
-ENV GO111MODULE=off
-
-# Build the Go app
-RUN go build -o main .
-
-# Expose port 8080 to the outside world
+FROM debian:buster-slim
+COPY --from=builder /app /app
 EXPOSE 4000
 
-# Command to run the executable
-CMD ["./main"]
+ENTRYPOINT ["/app"]
